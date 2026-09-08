@@ -67,8 +67,9 @@ def ask_gemini(messages_list):
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 200:
         res_json = response.json()
-        try:
-            return res_json["candidates"][0]["content"]["parts"][0]["text"]
+                    try:
+    return res_json["candidates"]["content"]["parts"]["text"]
+
         except Exception:
             return "🚨 Дарк: Отримано некоректну структуру відповіді від ядра."
     else:
