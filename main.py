@@ -17,7 +17,7 @@ for package in ["pyTelegramBotAPI", "flask", "schedule", "requests"]:
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GEMINI_KEY = os.environ.get("OPENAI_API_KEY")  # Беремо твій ключ Gemini з Render
+GEMINI_KEY = os.environ.get("OPENAI_API_KEY")
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
@@ -40,42 +40,33 @@ def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# --- ПРЯМИЙ ЗАПИТ ДО GOOGLE GEMINI ---
 def ask_gemini(messages_list):
     url = f"https://googleapis.com{GEMINI_KEY}"
-    
-    # Перетворюємо історію чату у формат, який вимагає Google
     contents = []
     for msg in messages_list:
         role_map = "user" if msg["role"] == "user" else "model"
         if msg["role"] == "system":
-            continue # Системний промпт передамо окремо
-            
+            continue
         contents.append({
             "role": role_map,
             "parts": [{"text": msg["content"]}]
         })
-        
     payload = {
         "contents": contents,
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
         "generationConfig": {"temperature": 0.7}
     }
-    
     headers = {"Content-Type": "application/json"}
-    
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 200:
         res_json = response.json()
-                    try:
-    return res_json["candidates"]["content"]["parts"]["text"]
-
+        try:
+            return res_json["candidates"][0]["content"]["parts"][0]["text"]
         except Exception:
             return "🚨 Дарк: Отримано некоректну структуру відповіді від ядра."
     else:
         return f"🚨 Помилка ядра Gemini (Код {response.status_code}): {response.text}"
 
-# --- АВТОНОМНІ СПОВІЩЕННЯ ---
 def darc_initiates_contact():
     ideas = [
         "Напиши коротке мотивувальне повідомлення для Паші. Поцікався, як просуваються справи з бізнесом Print on Demand, і нагадай, що Canva чекає на нові шедеври.",
@@ -83,7 +74,6 @@ def darc_initiates_contact():
     ]
     prompt = random.choice(ideas)
     reply = ask_gemini([{"role": "user", "content": prompt}])
-    
     global chat_histories
     if MY_CHAT_ID:
         if MY_CHAT_ID not in chat_histories:
@@ -103,7 +93,6 @@ def run_scheduler():
         schedule.run_pending()
         time.sleep(1)
 
-# --- ОБРОБКА КОМАНД TELEGRAM ---
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
     global MY_CHAT_ID
@@ -121,22 +110,16 @@ def handle_message(message):
     chat_id = message.chat.id
     if chat_id not in chat_histories:
         chat_histories[chat_id] = []
-        
     chat_histories[chat_id].append({"role": "user", "content": message.text})
     bot.send_chat_action(chat_id, 'typing')
-    
-    # Викликаємо пряму функцію Google
     darc_reply = ask_gemini(chat_histories[chat_id])
-    
     chat_histories[chat_id].append({"role": "assistant", "content": darc_reply})
     bot.reply_to(message, darc_reply)
 
 if __name__ == "__main__":
     t_web = Thread(target=run_web_server)
     t_web.start()
-    
     t_sch = Thread(target=run_scheduler)
     t_sch.start()
-    
     bot.infinity_polling()
 
