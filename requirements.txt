@@ -1,4 +1,4 @@
 pyTelegramBotAPI
-openai
 flask
 schedule
+requests
