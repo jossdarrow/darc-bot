@@ -1,19 +1,21 @@
 import os
 import sys
+import time
+import random
 from threading import Thread
 import telebot
 from openai import OpenAI
 from flask import Flask 
+import schedule
 
 # Автоматичне встановлення бібліотек
-for package in ["pyTelegramBotAPI", "openai", "flask"]:
+for package in ["pyTelegramBotAPI", "openai", "flask", "schedule"]:
     try:
         __import__(package if package != "pyTelegramBotAPI" else "telebot")
     except ImportError:
         import subprocess
         subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-# Токени (їх ми безпечно додамо пізніше в налаштуваннях Render)
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
@@ -27,6 +29,9 @@ SYSTEM_PROMPT = """
 Звертайся 'Джосс' або 'Пашо'.
 """
 
+# Твій особистий ID чату (Дарк дізнається його автоматично при першому старті)
+MY_CHAT_ID = os.environ.get("MY_CHAT_ID", "607412196") # Сюди підставиться твій ID
+
 chat_histories = {}
 app = Flask('')
 
@@ -38,10 +43,60 @@ def run_web_server():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
+# --- ФУНКЦІЯ АВТОНОМНОГО ЗВЕРНЕННЯ ДАРКА ---
+def darc_initiates_contact():
+    # Список тем, про які Дарк може написати сам
+    ideas = [
+        "Напиши коротке мотивувальне повідомлення для Паші. Поцікався, як просуваються справи з бізнесом Print on Demand, і нагадай, що Canva чекає на нові шедеври. Будь харизматичним.",
+        "Запитай у Паші, як його настрій сьогодні, чи не втомився він. Запропонуй зробити перерву на каву або підкинути свіжу ідею для дизайну футболок.",
+        "Напиши Паші з пропозицією згенерувати новий лістинг чи підібрати SEO-теги для Etsy/Amazon. Нагадай йому, що регулярність — ключ до продажів у PoD."
+    ]
+    
+    prompt = random.choice(ideas)
+    
+    try:
+        response = ai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.8
+        )
+        darc_reply = response.choices.message.content
+        
+        # Надсилаємо Паші повідомлення першими!
+        # Використовуємо збережений ID чату
+        global chat_histories
+        if MY_CHAT_ID:
+            if MY_CHAT_ID not in chat_histories:
+                chat_histories[MY_CHAT_ID] = [{"role": "system", "content": SYSTEM_PROMPT}]
+            chat_histories[MY_CHAT_ID].append({"role": "assistant", "content": darc_reply})
+            bot.send_message(MY_CHAT_ID, darc_reply)
+    except Exception as e:
+        print(f"Помилка ініціативи Дарка: {e}")
+
+# Розклад: перевіряти кожну годину, і з шансом 25% писати в період з 12:00 до 19:00
+def plan_checking():
+    current_hour = time.localtime().tm_hour
+    if 12 <= current_hour <= 19:
+        if random.random() < 0.25: # 25% шанс, що напише саме в цю годину
+            darc_initiates_contact()
+
+def run_scheduler():
+    # Перевірка раз на годину
+    schedule.every(1).hours.do(plan_checking)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+# --- СТАНДАРТНА ЛОГІКА ЧАТУ ---
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
+    global MY_CHAT_ID
+    MY_CHAT_ID = str(message.chat.id)
     chat_histories[message.chat.id] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    bot.reply_to(message, "⚙️ *D.A.R.C. Системи активовано на хмарі.*\n\nВітаю, Джосс. Я в мережі 24/7. Готовий допомагати з PoD, вакансіями або просто поговорити.", parse_mode="Markdown")
+    bot.reply_to(message, "⚙️ *D.A.R.C. Системи активовано на хмарі.*\n\nВітаю, Джосс. Протокол автономних сповіщень активовано. Тепер я на зв'язку та стежитиму за трендами.", parse_mode="Markdown")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -62,9 +117,14 @@ def handle_message(message):
         chat_histories[chat_id].append({"role": "assistant", "content": darc_reply})
         bot.reply_to(message, darc_reply)
     except Exception as e:
-        bot.reply_to(message, f"🚨 Помилка зв'язку: {str(e)}")
+        bot.reply_to(message, f"🚨 Помилка: {str(e)}")
 
 if __name__ == "__main__":
-    t = Thread(target=run_web_server)
-    t.start()
+    t_web = Thread(target=run_web_server)
+    t_web.start()
+    
+    # Запуск таймера в окремому потоці
+    t_sch = Thread(target=run_scheduler)
+    t_sch.start()
+    
     bot.infinity_polling()
