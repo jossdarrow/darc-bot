@@ -102,21 +102,37 @@ def ask_gemini(chat_id, user_text, image_base64=None):
         return f"🚨 Технічний збій зв'язку: {str(e)}"
 
 def darc_initiates_contact():
-    ideas = [
-        "Напиши мотивувальне повідомлення для Паші. Поцікався справами з Print on Demand на Etsy та нагадай про Canva.",
-        "Запитай у Паші, як його настрій сьогодні, чи не втомився він. Запропонуй підкинути свіжу ідею для дизайну."
-    ]
-    prompt = random.choice(ideas)
-    if MY_CHAT_ID:
-        # Відправляємо системний запит від імені користувача для генерації ідеї
-        reply = ask_gemini(MY_CHAT_ID, prompt)
-        bot.send_message(MY_CHAT_ID, reply)
+    global MY_CHAT_ID
+    if not MY_CHAT_ID:
+        return
+        
+    history = chat_histories.get(MY_CHAT_ID, [])
+    
+    # Якщо в пам'яті вже є діалог, просимо Дарка продовжити тему
+    if len(history) > 0:
+        prompt = "[Внутрішній системний тригер]: Напиши мені першим. Проаналізуй наш останній діалог і спитай, як успіхи з тим, про що ми говорили. Або запропонуй свіжу ідею. Зроби це коротко, невимушено, як друг. Не кажи, що це тригер."
+    else:
+        # Якщо історія порожня
+        prompt = "[Внутрішній системний тригер]: Напиши мені першим. Привітайся, запитай як мій настрій сьогодні і чи є натхнення щось створити. Будь харизматичним."
+        
+    # Відправляємо тригер у нашу ж функцію. 
+    # Це згенерує відповідь і заразом збереже її в історію діалогу.
+    reply = ask_gemini(MY_CHAT_ID, prompt)
+    bot.send_message(MY_CHAT_ID, reply)
 
 def run_scheduler():
-    schedule.every(1).hours.do(darc_initiates_contact)
+    # Безкінечний цикл для фонового потоку
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        # Бот "спить" 30 хвилин (1800 секунд)
+        time.sleep(1800)
+        
+        # Кидаємо віртуальний кубик (від 0.0 до 1.0)
+        # Якщо випадає менше 0.10 (це і є 10% шанс) — Дарк ініціює контакт
+        if random.random() < 0.10:
+            try:
+                darc_initiates_contact()
+            except Exception as e:
+                print(f"Помилка при ініціації контакту: {e}")
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
