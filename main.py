@@ -36,7 +36,7 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 def ask_gemini(user_text):
-    # Чиста адреса без жодних ключів!
+    # ПОВНЕ ТА СТАБІЛЬНЕ ПОСИЛАННЯ ДЛЯ GEMINI 3.5 FLASH-LITE
     url = "https://googleapis.com"
     
     payload = {
@@ -46,7 +46,6 @@ def ask_gemini(user_text):
         "generationConfig": {"temperature": 0.7}
     }
     
-    # Ключ передається безпечно тут, крапка нічого не зламає
     headers = {
         "Content-Type": "application/json",
         "x-goog-api-key": GEMINI_KEY
