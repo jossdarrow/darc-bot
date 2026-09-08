@@ -37,7 +37,7 @@ def run_web_server():
 
 def ask_gemini(user_text):
     # Повне та актуальне посилання для Gemini 1.5 Flash
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_KEY}"
 
     payload = {
         "contents": [{
