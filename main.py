@@ -36,10 +36,9 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 def ask_gemini(user_text):
-    # ПОВНЕ ТА СТАБІЛЬНЕ ПОСИЛАННЯ ДЛЯ GEMINI 3.5 FLASH-LITE
-    url = "https://googleapis.com"
+    # Повне та актуальне посилання для Gemini 1.5 Flash
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
 
-    
     payload = {
         "contents": [{
             "parts": [{"text": f"{SYSTEM_PROMPT}\n\nЗапит від користувача: {user_text}"}]
@@ -48,8 +47,7 @@ def ask_gemini(user_text):
     }
     
     headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_KEY
+        "Content-Type": "application/json"
     }
     
     try:
