@@ -36,9 +36,9 @@ def run_web_server():
     app.run(host='0.0.0.0', port=port)
 
 def ask_gemini(user_text):
-    url = f"https://googleapis.com{GEMINI_KEY}"
+    # Чиста адреса без жодних ключів!
+    url = "https://googleapis.com"
     
-    # Максимально проста та офіційна структура для Google API
     payload = {
         "contents": [{
             "parts": [{"text": f"{SYSTEM_PROMPT}\n\nЗапит від користувача: {user_text}"}]
@@ -46,16 +46,19 @@ def ask_gemini(user_text):
         "generationConfig": {"temperature": 0.7}
     }
     
-    headers = {"Content-Type": "application/json"}
+    # Ключ передається безпечно тут, крапка нічого не зламає
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_KEY
+    }
     
     try:
         response = requests.post(url, json=payload, headers=headers)
         if response.status_code == 200:
             res_json = response.json()
-            # Безпечно витягуємо текст за офіційною вкладеністю Google
             return res_json["candidates"][0]["content"]["parts"][0]["text"]
             
-        return f"🚨 Ошибка Google API (Код {response.status_code}): {response.text[:200]}"
+        return f"🚨 Помилка Google API (Код {response.status_code}): {response.text[:200]}"
     except Exception as e:
         return f"🚨 Технічний збій зв'язку: {str(e)}"
 
@@ -84,10 +87,7 @@ def send_welcome(message):
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
     bot.send_chat_action(message.chat.id, 'typing')
-    
-    # Отримуємо відповідь безпосередньо
     darc_reply = ask_gemini(message.text)
-    
     bot.reply_to(message, darc_reply)
 
 if __name__ == "__main__":
