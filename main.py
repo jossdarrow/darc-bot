@@ -60,10 +60,13 @@ def ask_gemini(messages_list):
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code == 200:
         res_json = response.json()
-        try:
+                   try:
+            # Спробуємо дістати текст за найпоширенішою структурою Gemini
             return res_json["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception:
-            return "🚨 Дарк: Отримано некоректну структуру відповіді від ядра."
+        except Exception as e:
+            # Якщо структура інша — Дарк не змовчить, а покаже нам реальний JSON, щоб ми зрозуміли в чому справа!
+            return f"🚨 Технічний збій структури: {str(e)} | Сирий JSON: {str(res_json)[:300]}"
+
     else:
         return f"🚨 Помилка ядра Gemini (Код {response.status_code}): {response.text}"
 
