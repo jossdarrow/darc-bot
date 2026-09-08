@@ -38,6 +38,7 @@ def run_web_server():
 def ask_gemini(user_text):
     # ПОВНЕ ТА СТАБІЛЬНЕ ПОСИЛАННЯ ДЛЯ GEMINI 3.5 FLASH-LITE
     url = "https://googleapis.com"
+
     
     payload = {
         "contents": [{
