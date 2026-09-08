@@ -56,7 +56,7 @@ def darc_initiates_contact():
     
     try:
         response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gemini-3.5-flash-lite",
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": prompt}
@@ -109,7 +109,7 @@ def handle_message(message):
     
     try:
         response = ai_client.chat.completions.create(
-            model="gpt-4o-mini",
+           model="gemini-3.5-flash-lite",
             messages=chat_histories[chat_id],
             temperature=0.7
         )
