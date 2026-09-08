@@ -63,7 +63,8 @@ def darc_initiates_contact():
             ],
             temperature=0.8
         )
-        darc_reply = response.choices.message.content
+      darc_reply = response.choices[0].message.content
+
         
         # Надсилаємо Паші повідомлення першими!
         # Використовуємо збережений ID чату
@@ -113,7 +114,7 @@ def handle_message(message):
             messages=chat_histories[chat_id],
             temperature=0.7
         )
-        darc_reply = response.choices.message.content
+    darc_reply = response.choices[0].message.content
         chat_histories[chat_id].append({"role": "assistant", "content": darc_reply})
         bot.reply_to(message, darc_reply)
     except Exception as e:
